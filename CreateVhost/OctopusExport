@@ -3,12 +3,12 @@
   "Name": "RabbitMQ - Create Vhost",
   "Description": "Create a Vhost on a RabbitMQ cluster.\n\nSource code: https://github.com/rongriffin/OctopusRabbitMQ",
   "ActionType": "Octopus.Script",
-  "Version": 0,
+  "Version": 4,
   "Properties": {
     "Octopus.Action.Script.Syntax": "PowerShell",
     "Octopus.Action.Script.ScriptSource": "Inline",
     "Octopus.Action.RunOnServer": "false",
-    "Octopus.Action.Script.ScriptBody": "##\r\n# Print the settings for debugging purposes\r\n##\r\nfunction Print-DebugVariables($RabbitHost, $Port, $UserName, $Vhost) {\r\n    Write-Host \"Using RabbitMQ Host: $RabbitHost\"\r\n    Write-Host \"Using RabbitMQ Port: $Port\"\r\n    Write-Host \"Using Username: $UserName\"\r\n    Write-Host \"Using VHost: $Vhost\"    \r\n}\r\n\r\n##\r\n# Create a new vhost\r\n##\r\nfunction Create-VirtualHost($RabbitHost, $Port, $Vhost, $Credential) {\r\n    $uri = \"http://${RabbitHost}:$Port/api/vhosts/$Vhost\"\r\n    Write-Host \"Creating vhost at $uri\"\r\n    Invoke-RestMethod -Uri $uri -Credential $Credential -Method Put -ContentType 'application/json'\r\n    \r\n}\r\n\r\nfunction Check-VirtualHostExists($RabbitHost, $Port, $Vhost, $Credential) {\r\n    $uri = \"http://${RabbitHost}:$Port/api/vhosts\"\r\n    Write-Host \"Retrieving vhosts at $uri\"\r\n    $response = Invoke-RestMethod -Uri $uri -Credential $Credential -Method Get \r\n\r\n    foreach ($item in $response) {\r\n        if($item.name -eq $Vhost) {\r\n            Write-Host \"vhost [$Vhost] exists!\"\r\n            return $true\r\n        }\r\n    }\r\n\r\n    return $false\r\n}\r\n\r\n# Handle untrusted certs since we use self-signed certificates.\r\nadd-type @\"\r\n    using System.Net;\r\n    using System.Security.Cryptography.X509Certificates;\r\n    public class TrustAllCertsPolicy : ICertificatePolicy {\r\n        public bool CheckValidationResult(\r\n            ServicePoint srvPoint, X509Certificate certificate,\r\n            WebRequest request, int certificateProblem) {\r\n            return true;\r\n        }\r\n    }\r\n\"@\r\n[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy\r\n\r\n# variable names are prefixed with 'step' to prevent issues with Octopus variable set name collisions.\r\nPrint-DebugVariables $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQUser $stepRabbitMQVirtualHost\r\n\r\n#create F5 Credentials\r\n$secpasswd = ConvertTo-SecureString $stepRabbitMQPassword -AsPlainText -Force\r\n$cred = New-Object System.Management.Automation.PSCredential ($stepRabbitMQUser, $secpasswd)\r\n\r\n$exists = Check-VirtualHostExists $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQVirtualHost $cred\r\nif ($exists) {\r\n    Write-Host \"Skipping...\"\r\n}\r\nelse {\r\n    Create-VirtualHost $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQVirtualHost $cred\r\n    Write-Host \"Done.\"\r\n}",
+    "Octopus.Action.Script.ScriptBody": "##\r\n# Print the settings for debugging purposes\r\n##\r\nfunction Print-DebugVariables($RabbitHost, $Port, $UserName, $Vhost) {\r\n    Write-Host \"Using RabbitMQ Host: $RabbitHost\"\r\n    Write-Host \"Using RabbitMQ Port: $Port\"\r\n    Write-Host \"Using API Username: $UserName\"\r\n    Write-Host \"Using VHost: $Vhost\"    \r\n}\r\n\r\n##\r\n# Create a new vhost\r\n##\r\nfunction Create-VirtualHost($RabbitHost, $Port, $Vhost, $Credential) {\r\n    $uri = \"http://${RabbitHost}:$Port/api/vhosts/$Vhost\"\r\n    Write-Host \"Creating vhost at $uri\"\r\n    Invoke-RestMethod -Uri $uri -Credential $Credential -Method Put -ContentType 'application/json'\r\n    \r\n}\r\n\r\nfunction Check-VirtualHostExists($RabbitHost, $Port, $Vhost, $Credential) {\r\n    $uri = \"http://${RabbitHost}:$Port/api/vhosts\"\r\n    Write-Host \"Retrieving vhosts at $uri\"\r\n    $response = Invoke-RestMethod -Uri $uri -Credential $Credential -Method Get \r\n\r\n    foreach ($item in $response) {\r\n        if($item.name -eq $Vhost) {\r\n            Write-Host \"vhost [$Vhost] exists!\"\r\n            return $true\r\n        }\r\n    }\r\n\r\n    return $false\r\n}\r\n\r\n# Handle untrusted certs since we use self-signed certificates.\r\nadd-type @\"\r\n    using System.Net;\r\n    using System.Security.Cryptography.X509Certificates;\r\n    public class TrustAllCertsPolicy : ICertificatePolicy {\r\n        public bool CheckValidationResult(\r\n            ServicePoint srvPoint, X509Certificate certificate,\r\n            WebRequest request, int certificateProblem) {\r\n            return true;\r\n        }\r\n    }\r\n\"@\r\n[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy\r\n\r\n# variable names are prefixed with 'step' to prevent issues with Octopus variable set name collisions.\r\nPrint-DebugVariables $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQApiUser $stepRabbitMQVirtualHost\r\n\r\n#create Credentials\r\n$secpasswd = ConvertTo-SecureString $stepRabbitMQApiPassword -AsPlainText -Force\r\n$cred = New-Object System.Management.Automation.PSCredential ($stepRabbitMQApiUser, $secpasswd)\r\n\r\n$exists = Check-VirtualHostExists $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQVirtualHost $cred\r\nif ($exists) {\r\n    Write-Host \"Skipping...\"\r\n}\r\nelse {\r\n    Create-VirtualHost $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQVirtualHost $cred\r\n    Write-Host \"Done.\"\r\n}",
     "Octopus.Action.Script.ScriptFileName": null,
     "Octopus.Action.Package.FeedId": null,
     "Octopus.Action.Package.PackageId": null
@@ -36,8 +36,8 @@
     },
     {
       "Id": "b1a54bc3-8444-4588-9d41-98b77c44112f",
-      "Name": "stepRabbitMQUser",
-      "Label": "RabbitMQ User",
+      "Name": "stepRabbitMQAPIUser",
+      "Label": "RabbitMQ API User",
       "HelpText": "The username of a user with access to the RabbitMQ API",
       "DefaultValue": null,
       "DisplaySettings": {
@@ -46,8 +46,8 @@
     },
     {
       "Id": "cb9da281-fd40-41de-8f8b-e720b831b439",
-      "Name": "stepRabbitMQPassword",
-      "Label": "RabbitMQ Password",
+      "Name": "stepRabbitMQApiPassword",
+      "Label": "RabbitMQ API Password",
       "HelpText": "The password for a user with access to the RabbitMQ API",
       "DefaultValue": null,
       "DisplaySettings": {
@@ -66,7 +66,7 @@
     }
   ],
   "$Meta": {
-    "ExportedAt": "2016-12-07T22:38:25.641Z",
+    "ExportedAt": "2016-12-13T22:50:19.761Z",
     "OctopusVersion": "3.4.14",
     "Type": "ActionTemplate"
   }

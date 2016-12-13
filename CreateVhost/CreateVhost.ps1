@@ -4,7 +4,7 @@
 function Print-DebugVariables($RabbitHost, $Port, $UserName, $Vhost) {
     Write-Host "Using RabbitMQ Host: $RabbitHost"
     Write-Host "Using RabbitMQ Port: $Port"
-    Write-Host "Using Username: $UserName"
+    Write-Host "Using API Username: $UserName"
     Write-Host "Using VHost: $Vhost"    
 }
 
@@ -48,11 +48,11 @@ add-type @"
 [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
 
 # variable names are prefixed with 'step' to prevent issues with Octopus variable set name collisions.
-Print-DebugVariables $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQUser $stepRabbitMQVirtualHost
+Print-DebugVariables $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQApiUser $stepRabbitMQVirtualHost
 
 #create Credentials
-$secpasswd = ConvertTo-SecureString $stepRabbitMQPassword -AsPlainText -Force
-$cred = New-Object System.Management.Automation.PSCredential ($stepRabbitMQUser, $secpasswd)
+$secpasswd = ConvertTo-SecureString $stepRabbitMQApiPassword -AsPlainText -Force
+$cred = New-Object System.Management.Automation.PSCredential ($stepRabbitMQApiUser, $secpasswd)
 
 $exists = Check-VirtualHostExists $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQVirtualHost $cred
 if ($exists) {

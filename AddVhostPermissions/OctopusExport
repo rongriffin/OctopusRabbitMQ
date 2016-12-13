@@ -1,0 +1,83 @@
+{
+  "Id": "ActionTemplates-484",
+  "Name": "RabbitMQ - Set User Vhost Permissions",
+  "Description": "Set up vhost permissions for the specified RabbitMQ user\n\nStep definitions maintained at:  https://github.com/rongriffin/OctopusRabbitMQ",
+  "ActionType": "Octopus.Script",
+  "Version": 0,
+  "Properties": {
+    "Octopus.Action.Script.Syntax": "PowerShell",
+    "Octopus.Action.Script.ScriptSource": "Inline",
+    "Octopus.Action.RunOnServer": "false",
+    "Octopus.Action.Script.ScriptBody": "##\r\n# Print the settings for debugging purposes\r\n##\r\nfunction Print-DebugVariables($RabbitHost, $Port, $ApiUserName, $UserName, $VHost) {\r\n    Write-Host \"Using RabbitMQ Host: $RabbitHost\"\r\n    Write-Host \"Using RabbitMQ Port: $Port\"\r\n    Write-Host \"Using API Username: $ApiUserName\"\r\n    Write-Host \"Setting up permissions for Username: $UserName\"\r\n    Write-Host \"Setting up permissions on Vhost: $Vhost\"\r\n}\r\n\r\n##\r\n# Create a new user\r\n##\r\nfunction Set-UserVhostPermsission($RabbitHost, $Port, $UserName, $Vhost, $Credential) {\r\n    $uri = \"http://${RabbitHost}:$Port/api/permissions/$Vhost/$UserName\"\r\n    Write-Host \"Setting user permissions at $uri\"\r\n\r\n    $request = @{\r\n        configure=\".*\"\r\n        write=\".*\"\r\n        read=\".*\"\r\n    }\r\n\r\n    $body = $request | ConvertTo-Json\r\n    Invoke-RestMethod -Uri $uri -Credential $Credential -Body $body -Method Put -ContentType 'application/json'    \r\n}\r\n\r\n##\r\n# Check if a vhost exists\r\n##\r\nfunction Check-VirtualHostExists($RabbitHost, $Port, $Vhost, $Credential) {\r\n    $uri = \"http://${RabbitHost}:$Port/api/vhosts\"\r\n    Write-Host \"Retrieving vhosts at $uri\"\r\n    $response = Invoke-RestMethod -Uri $uri -Credential $Credential -Method Get \r\n\r\n    foreach ($item in $response) {\r\n        if($item.name -eq $Vhost) {\r\n            Write-Host \"vhost [$Vhost] exists!\"\r\n            return $true\r\n        }\r\n    }\r\n\r\n    return $false\r\n}\r\n\r\n##\r\n# Check if the specified user already exists\r\n##\r\nfunction Check-RabbitUserExists($RabbitHost, $Port, $UserName, $Credential) {\r\n    $uri = \"http://${RabbitHost}:$Port/api/users\"\r\n    Write-Host \"Retrieving current users at $uri\"\r\n    $response = Invoke-RestMethod -Uri $uri -Credential $Credential -Method Get \r\n\r\n    foreach ($item in $response) {\r\n        if($item.name -eq $UserName) {\r\n            Write-Host \"user [$UserName] exists!\"\r\n            return $true\r\n        }\r\n    }\r\n\r\n    return $false\r\n}\r\n\r\n# Handle untrusted certs since we use self-signed certificates.\r\nadd-type @\"\r\n    using System.Net;\r\n    using System.Security.Cryptography.X509Certificates;\r\n    public class TrustAllCertsPolicy : ICertificatePolicy {\r\n        public bool CheckValidationResult(\r\n            ServicePoint srvPoint, X509Certificate certificate,\r\n            WebRequest request, int certificateProblem) {\r\n            return true;\r\n        }\r\n    }\r\n\"@\r\n[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy\r\n\r\n# variable names are prefixed with 'step' to prevent issues with Octopus variable set name collisions.\r\nPrint-DebugVariables $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQApiUser $stepRabbitMQUser $stepRabbitMQVhost\r\n\r\n#create Credentials\r\n$secpasswd = ConvertTo-SecureString $stepRabbitMQApiPassword -AsPlainText -Force\r\n$cred = New-Object System.Management.Automation.PSCredential ($stepRabbitMQApiUser, $secpasswd)\r\n\r\n$userexists = Check-RabbitUserExists $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQUser $cred\r\nif ($userexists) {\r\n    $vhostexists = Check-VirtualHostExists $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQVhost $cred\r\n    if ($vhostexists) {\r\n         Set-UserVhostPermsission $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQUser $stepRabbitMQVhost $cred\r\n         Write-Host \"Done.\"\r\n    }\r\n    else {\r\n        Write-Error \"Vhost [$stepRabbitMQVhost] does not exist.  Create it first.\"\r\n    }\r\n}\r\nelse {    \r\n    Write-Error \"User [$stepRabbitMQUser] does not exist.  Create it first.\"\r\n}",
+    "Octopus.Action.Script.ScriptFileName": null,
+    "Octopus.Action.Package.FeedId": null,
+    "Octopus.Action.Package.PackageId": null
+  },
+  "Parameters": [
+    {
+      "Id": "516cc706-8109-4e12-addb-4b52a5d1491a",
+      "Name": "stepRabbitMQHost",
+      "Label": "RabbitMQ Host",
+      "HelpText": null,
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "58042f68-17f2-4965-9b55-c5bfbc67fe4f",
+      "Name": "stepRabbitMQPort",
+      "Label": "RabbitMQ API Port",
+      "HelpText": null,
+      "DefaultValue": "15672",
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "fbf18967-3f31-4507-bb8d-ee59b5af6bc7",
+      "Name": "stepRabbitMQApiUser",
+      "Label": "RabbitMQ API User",
+      "HelpText": "The username of a user with RabbitMQ Api access.",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "7f34fb3d-81be-4e0f-ab62-e9fabf21b541",
+      "Name": "stepRabbitMQApiPassword",
+      "Label": "RabbitMQApiPassword",
+      "HelpText": "The password for a user with access to the RabbitMQ API.",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "4810c2a0-5e99-433d-ae69-c7e298757b9b",
+      "Name": "stepRabbitMQUser",
+      "Label": "RabbitMQ User",
+      "HelpText": "The username of the user we're creating permissions for",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "16f7a017-f9ba-4e95-b725-c3629e9933fe",
+      "Name": "stepRabbitMQVhost",
+      "Label": "RabbitMQ Vhost",
+      "HelpText": "The vhost in RabbitMQ we're setting up permissions for.",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    }
+  ],
+  "$Meta": {
+    "ExportedAt": "2016-12-13T22:47:14.560Z",
+    "OctopusVersion": "3.4.14",
+    "Type": "ActionTemplate"
+  }
+}
