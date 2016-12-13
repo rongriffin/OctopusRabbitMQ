@@ -1,0 +1,83 @@
+{
+  "Id": "ActionTemplates-483",
+  "Name": "RabbitMQ - Create User",
+  "Description": "Create a user in RabbitMQ.\n\nSteps maintained here:  https://github.com/rongriffin/OctopusRabbitMQ",
+  "ActionType": "Octopus.Script",
+  "Version": 1,
+  "Properties": {
+    "Octopus.Action.Script.Syntax": "PowerShell",
+    "Octopus.Action.Script.ScriptSource": "Inline",
+    "Octopus.Action.RunOnServer": "false",
+    "Octopus.Action.Script.ScriptBody": "##\r\n# Print the settings for debugging purposes\r\n##\r\nfunction Print-DebugVariables($RabbitHost, $Port, $ApiUserName, $NewUserName) {\r\n    Write-Host \"Using RabbitMQ Host: $RabbitHost\"\r\n    Write-Host \"Using RabbitMQ Port: $Port\"\r\n    Write-Host \"Using API Username: $UserName\"\r\n    Write-Host \"Creating Username: $UserName\"\r\n}\r\n\r\n##\r\n# Create a new user\r\n##\r\nfunction Create-RabbitUser($RabbitHost, $Port, $NewUserName, $NewPassword, $Credential) {\r\n    $uri = \"http://${RabbitHost}:$Port/api/users/$NewUserName\"\r\n    Write-Host \"Creating a new user at $uri\"\r\n\r\n    $request = @{\r\n        password=\"$NewPassword\"\r\n        tags=\"\"\r\n    }\r\n\r\n    $body = $request | ConvertTo-Json\r\n    Invoke-RestMethod -Uri $uri -Credential $Credential -Body $body -Method Put -ContentType 'application/json'\r\n    \r\n}\r\n\r\n##\r\n# Check if the specified user already exists\r\n##\r\nfunction Check-RabbitUserExists($RabbitHost, $Port, $NewUserName, $Credential) {\r\n    $uri = \"http://${RabbitHost}:$Port/api/users\"\r\n    Write-Host \"Retrieving current users at $uri\"\r\n    $response = Invoke-RestMethod -Uri $uri -Credential $Credential -Method Get \r\n\r\n    foreach ($item in $response) {\r\n        if($item.name -eq $NewUserName) {\r\n            Write-Host \"user [$NewUserName] exists!\"\r\n            return $true\r\n        }\r\n    }\r\n\r\n    return $false\r\n}\r\n\r\n# Handle untrusted certs since we use self-signed certificates.\r\nadd-type @\"\r\n    using System.Net;\r\n    using System.Security.Cryptography.X509Certificates;\r\n    public class TrustAllCertsPolicy : ICertificatePolicy {\r\n        public bool CheckValidationResult(\r\n            ServicePoint srvPoint, X509Certificate certificate,\r\n            WebRequest request, int certificateProblem) {\r\n            return true;\r\n        }\r\n    }\r\n\"@\r\n[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy\r\n\r\n# variable names are prefixed with 'step' to prevent issues with Octopus variable set name collisions.\r\nPrint-DebugVariables $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQUser $stepRabbitMQNewUserName\r\n\r\n#create Credentials\r\n$secpasswd = ConvertTo-SecureString $stepRabbitMQPassword -AsPlainText -Force\r\n$cred = New-Object System.Management.Automation.PSCredential ($stepRabbitMQUser, $secpasswd)\r\n\r\n$exists = Check-RabbitUserExists $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQNewUserName $cred\r\nif ($exists) {\r\n    Write-Host \"Skipping...\"\r\n}\r\nelse {\r\n    Create-RabbitUser $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQNewUserName $stepRabbitMQNewUserPassword $cred\r\n    Write-Host \"Done.\"\r\n}",
+    "Octopus.Action.Script.ScriptFileName": null,
+    "Octopus.Action.Package.FeedId": null,
+    "Octopus.Action.Package.PackageId": null
+  },
+  "Parameters": [
+    {
+      "Id": "139340a5-81a5-4f0c-aaee-4ea2b0e4c119",
+      "Name": "stepRabbitMQHost",
+      "Label": "RabbitMQ Host",
+      "HelpText": "",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "420a2cd8-5f32-4ab3-a8a3-4d93f7f760cb",
+      "Name": "stepRabbitMQPort",
+      "Label": "RabbitMQ API Port",
+      "HelpText": null,
+      "DefaultValue": "15672",
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "0ac26b20-4c43-489e-b8a2-4c142a3a06ad",
+      "Name": "stepRabbitMQUser",
+      "Label": "RabbitMQ API User",
+      "HelpText": "The username of a RabbitMQ user who has rights to access the API endpoints",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "b06a6974-ea0b-46b3-b50f-f2050f546921",
+      "Name": "stepRabbitMQPassword",
+      "Label": "RabbitMQ API Password",
+      "HelpText": "The password for a user with access to the RabbitMQ API",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "636e5ab1-d9fc-4b48-9ebd-95887dc53d77",
+      "Name": "stepRabbitMQNewUserName",
+      "Label": "RabbitMQ New User Name",
+      "HelpText": "The username of the RabbitMQ user to create",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "9ad816a1-2c7b-49ad-8ba2-b1a5ce3ec7b4",
+      "Name": "stepRabbitMQNewUserPassword",
+      "Label": "RabbitMQ New User Password",
+      "HelpText": "The password for the new user to create.",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    }
+  ],
+  "$Meta": {
+    "ExportedAt": "2016-12-13T22:09:16.010Z",
+    "OctopusVersion": "3.4.14",
+    "Type": "ActionTemplate"
+  }
+}

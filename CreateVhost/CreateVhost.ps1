@@ -50,7 +50,7 @@ add-type @"
 # variable names are prefixed with 'step' to prevent issues with Octopus variable set name collisions.
 Print-DebugVariables $stepRabbitMQHost $stepRabbitMQPort $stepRabbitMQUser $stepRabbitMQVirtualHost
 
-#create F5 Credentials
+#create Credentials
 $secpasswd = ConvertTo-SecureString $stepRabbitMQPassword -AsPlainText -Force
 $cred = New-Object System.Management.Automation.PSCredential ($stepRabbitMQUser, $secpasswd)
 
