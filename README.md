@@ -10,6 +10,6 @@ If a vhost does not exist on the specified RabbitMQ cluster, create it.
 
 Create a new user on the specified RabbitMQ cluster.
 
-##GrantUserVhostAccess
+##AddVhostPermissions
 
 Set user access to a RabbitMQ vhost
